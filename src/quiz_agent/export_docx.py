@@ -17,18 +17,23 @@ def _iso(text: str) -> str:
     return f"{FSI}{text}{PDI}"
 
 
-def _rtl_paragraph(paragraph):
-    """הופך פסקה לימין-לשמאל."""
+def _rtl_paragraph(paragraph, align_left=False):
+    """הופך פסקה לימין-לשמאל.
+
+    שימו לב: בפסקה מימין-לשמאל Word הופך את המשמעות של "ימין" ו"שמאל" -
+    LEFT = צד ההתחלה (ימין בפועל), RIGHT = צד הסוף (שמאל בפועל).
+    """
     p_pr = paragraph._p.get_or_add_pPr()
     bidi = OxmlElement("w:bidi")
     bidi.set(qn("w:val"), "1")
     p_pr.append(bidi)
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT if align_left else WD_ALIGN_PARAGRAPH.LEFT
 
 
-def _add(doc, text, size=12, bold=False, color=None, italic=False, space_after=4, indent=0):
+def _add(doc, text, size=12, bold=False, color=None, italic=False, space_after=4, indent=0,
+         align_left=False):
     p = doc.add_paragraph()
-    _rtl_paragraph(p)
+    _rtl_paragraph(p, align_left)
     p.paragraph_format.space_after = Pt(space_after)
     if indent:
         p.paragraph_format.left_indent = Pt(indent)  # בפסקה מימין-לשמאל, "left" הוא צד ההתחלה (ימין)
@@ -63,7 +68,8 @@ def _build(questions, title, teacher: bool) -> Document:
     if teacher:
         _add(doc, "גרסת מורה – מפתח תשובות", size=13, color=(0xC0, 0x00, 0x00), space_after=14)
     else:
-        _add(doc, "שם: ____________________     תאריך: ____________", size=12, space_after=14)
+        _add(doc, "שם: ____________________     תאריך: ____________", size=12, space_after=14,
+             align_left=True)
 
     for n, q in enumerate(questions, start=1):
         _add(doc, f"{RLM}{n}. {_iso(q['question'])}", size=13, bold=True, space_after=4)
