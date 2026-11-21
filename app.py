@@ -53,7 +53,9 @@ def cfg():
 
 
 # ---------- הודעות התקדמות לפי צומת ----------
-def describe(node: str, update: dict) -> str | None:
+def describe(node: str, update) -> str | None:
+    if node == "__interrupt__":          # הודעת עצירה מגיעה כ-tuple ולא כמילון
+        return "⏸ השאלות מוכנות לאישור המורה"
     qs = (update or {}).get("questions", [])
     if node == "generate":
         n = sum(1 for q in qs if q["status"] == "pending")
@@ -75,8 +77,6 @@ def describe(node: str, update: dict) -> str | None:
         return f"🔁 מייצר {update['to_generate']} שאלות חלופיות (סבב {update['replacement_round']})"
     if node == "export":
         return "📄 קבצי Word נוצרו"
-    if node == "__interrupt__":
-        return "⏸ השאלות מוכנות לאישור המורה"
     return None
 
 
