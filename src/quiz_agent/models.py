@@ -21,6 +21,18 @@ class MCQSet(BaseModel):
     questions: list[MCQ]
 
 
+class RewrittenMCQ(MCQ):
+    """שאלה מתוקנת, עם המספר של השאלה המקורית."""
+
+    id: int = Field(description="מספר השאלה המקורית שתוקנה")
+
+
+class RewriteSet(BaseModel):
+    """כל השאלות המתוקנות - בקריאה אחת."""
+
+    questions: list[RewrittenMCQ]
+
+
 class Verdict(BaseModel):
     """פסק הדין של הבודק על שאלה אחת."""
 

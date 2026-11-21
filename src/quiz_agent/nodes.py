@@ -3,8 +3,8 @@ from langgraph.types import interrupt
 
 from .config import MAX_REWRITE_ATTEMPTS, get_llm
 from .export_docx import export_to_word
-from .models import MCQ, MCQSet, QuestionItem, QuizState, Verdict, VerdictSet
-from .prompts import (AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT,
+from .models import MCQ, MCQSet, QuestionItem, QuizState, RewriteSet, Verdict, VerdictSet
+from .prompts import (AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_ITEM, REWRITE_PROMPT,
                       VALIDATOR_ITEM, VALIDATOR_PROMPT)
 
 
@@ -109,23 +109,39 @@ def validate(state: QuizState) -> dict:
 # ---------- ③ כותב מחדש ----------
 
 def rewrite(state: QuizState) -> dict:
-    """כותב מחדש רק את השאלות הפסולות, לפי סיבת הפסילה."""
-    llm = get_llm(temperature=0.7).with_structured_output(MCQ, method="json_schema")
+    """כותב מחדש את כל השאלות הפסולות, לפי סיבת הפסילה של כל אחת - בקריאה אחת למודל."""
+    invalid = [q for q in state["questions"] if q["status"] == "invalid"]
+    if not invalid:
+        return {}
+
+    llm = get_llm(temperature=0.7).with_structured_output(RewriteSet, method="json_schema")
+    result: RewriteSet = llm.invoke(
+        REWRITE_PROMPT.format(
+            source_text=state["source_text"],
+            questions="\n\n".join(
+                REWRITE_ITEM.format(
+                    id=q["id"],
+                    question=q["question"],
+                    options=_format_options(q["options"]),
+                    correct=f"{q['correct_index']}. {q['options'][q['correct_index']]}",
+                    feedback=q["feedback"],
+                )
+                for q in invalid
+            ),
+        )
+    )
+    by_id = {r.id: r for r in result.questions}
+
     updated = []
     for q in state["questions"]:
+        new = by_id.get(q["id"]) if q["status"] == "invalid" else None
         if q["status"] != "invalid":
             updated.append(q)
             continue
-
-        new: MCQ = llm.invoke(
-            REWRITE_PROMPT.format(
-                source_text=state["source_text"],
-                question=q["question"],
-                options=_format_options(q["options"]),
-                correct=f"{q['correct_index']}. {q['options'][q['correct_index']]}",
-                feedback=q["feedback"],
-            )
-        )
+        if new is None:
+            # המודל דילג על השאלה - נשאיר אותה כמו שהיא, והבודק יבדוק אותה שוב
+            updated.append({**q, "status": "pending", "attempts": q["attempts"] + 1})
+            continue
         updated.append({
             **q,
             "question": new.question,
