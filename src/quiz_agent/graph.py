@@ -52,5 +52,6 @@ def initial_state(source_text: str) -> QuizState:
         next_id=1,
         replacement_round=0,
         deleted_count=0,
+        deleted_questions=[],
         export_path=None,
     )

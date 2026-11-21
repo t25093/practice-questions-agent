@@ -3,7 +3,7 @@ from langgraph.types import interrupt
 
 from .config import MAX_REWRITE_ATTEMPTS, get_llm
 from .models import MCQ, MCQSet, QuestionItem, QuizState, Verdict
-from .prompts import AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT, VALIDATOR_PROMPT
+from .prompts import AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT, VALIDATOR_PROMPT
 
 
 def _format_options(options: list[str]) -> str:
@@ -31,9 +31,12 @@ def generate(state: QuizState) -> dict:
     existing = state.get("questions", [])
     count = state["to_generate"]
 
-    avoid = ""
+    avoid_parts = []
     if existing:
-        avoid = AVOID_DUPLICATES.format(existing="\n".join(f"- {q['question']}" for q in existing))
+        avoid_parts.append(AVOID_DUPLICATES.format(existing="\n".join(f"- {q['question']}" for q in existing)))
+    if state.get("deleted_questions"):
+        avoid_parts.append(AVOID_DELETED.format(deleted="\n".join(f"- {t}" for t in state["deleted_questions"])))
+    avoid = "\n\n".join(avoid_parts)
 
     llm = get_llm(temperature=0.8).with_structured_output(MCQSet, method="json_schema")
     result: MCQSet = llm.invoke(
@@ -131,7 +134,7 @@ def teacher_review(state: QuizState) -> dict:
     })
     decisions = {int(k): v for k, v in (answer or {}).get("decisions", {}).items()}
 
-    kept, deleted = [], 0
+    kept, deleted_texts = [], []
     for q in state["questions"]:
         if q["status"] == "approved":
             kept.append(q)
@@ -139,7 +142,7 @@ def teacher_review(state: QuizState) -> dict:
         d = decisions.get(q["id"], {"action": "approve"})
         action = d.get("action", "approve")
         if action == "delete":
-            deleted += 1
+            deleted_texts.append(q["question"])
         elif action == "edit":
             kept.append({
                 **q,
@@ -152,7 +155,11 @@ def teacher_review(state: QuizState) -> dict:
         else:
             kept.append({**q, "status": "approved"})
 
-    return {"questions": kept, "deleted_count": deleted}
+    return {
+        "questions": kept,
+        "deleted_count": len(deleted_texts),
+        "deleted_questions": state.get("deleted_questions", []) + deleted_texts,
+    }
 
 
 def prepare_replacements(state: QuizState) -> dict:
