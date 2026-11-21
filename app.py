@@ -6,6 +6,7 @@
 המסך הוא רק "חלון" אל הגרף: הוא מתחיל ריצה, מציג את ההתקדמות,
 מציג את השאלות כשהגרף עוצר (interrupt), ושולח בחזרה את החלטות המורה.
 """
+import html
 import sqlite3
 import sys
 import uuid
@@ -31,6 +32,10 @@ st.markdown(
     .stRadio [role="radiogroup"] { justify-content: flex-start; }
     textarea, input { direction: rtl; text-align: right; }
     code { direction: ltr; unicode-bidi: isolate; }
+    .q-text { font-weight: 700; font-size: 1.05rem; margin-bottom: .4rem; }
+    .q-opt { padding: .15rem .8rem .15rem 0; }
+    .q-opt.correct { color: #15803d; font-weight: 600; }
+    .q-quote { color: #6b7280; font-size: .85rem; margin-top: .4rem; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -127,12 +132,18 @@ def start_screen():
 
 
 def show_question(q, show_correct=True):
-    st.markdown(f"**{q['question']}**")
+    """מציג שאלה כ-HTML: הטקסט מוצג כמו שהוא (בלי פענוח Markdown שבולע סימנים כמו ** או ^),
+    וכל קטע עטוף ב-<bdi> כדי שקוד באנגלית לא יתהפך בתוך שורה עברית."""
+    esc = html.escape
+    lines = [f'<div class="q-text"><bdi>{esc(q["question"])}</bdi></div>']
     for i, opt in enumerate(q["options"], start=1):
-        mark = " ✅" if show_correct and i - 1 == q["correct_index"] else ""
-        st.markdown(f"{i}. {opt}{mark}")
+        correct = show_correct and i - 1 == q["correct_index"]
+        cls = "q-opt correct" if correct else "q-opt"
+        mark = " ✅" if correct else ""
+        lines.append(f'<div class="{cls}">{i}. <bdi>{esc(opt)}</bdi>{mark}</div>')
     if q.get("source_quote"):
-        st.caption(f"מקור בטקסט: \"{q['source_quote']}\"")
+        lines.append(f'<div class="q-quote">מקור בטקסט: "<bdi>{esc(q["source_quote"])}</bdi>"</div>')
+    st.markdown(f'<div dir="rtl">{"".join(lines)}</div>', unsafe_allow_html=True)
 
 
 def review_screen(payload):
