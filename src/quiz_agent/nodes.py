@@ -57,7 +57,8 @@ def generate(state: QuizState) -> dict:
 # ---------- ② בודק ----------
 
 def validate(state: QuizState) -> dict:
-    """בודק כל שאלה שעוד לא נבדקה: האם ניתנת למענה מהטקסט, והאם יש לה רק תשובה נכונה אחת."""
+    """בודק כל שאלה שעוד לא נבדקה: מבוססת על הטקסט, תשובה נכונה אחת, נכונה במציאות,
+    ולא "מסגירה את עצמה"."""
     pending = [q for q in state["questions"] if q["status"] == "pending"]
     if not pending:
         return {}
@@ -90,8 +91,10 @@ def validate(state: QuizState) -> dict:
         if verdict is None:
             # המודל דילג על השאלה - נחשיב כפסולה כדי שתיבדק שוב אחרי תיקון
             verdict = Verdict(id=q["id"], answerable_from_text=False, single_correct_answer=False,
+                              factually_correct=False, gives_itself_away=False,
                               reason="הבודק לא החזיר פסק דין לשאלה זו")
-        ok = verdict.answerable_from_text and verdict.single_correct_answer
+        ok = (verdict.answerable_from_text and verdict.single_correct_answer
+              and verdict.factually_correct and not verdict.gives_itself_away)
         if ok:
             updated.append({**q, "status": "valid", "feedback": ""})
         elif q["attempts"] >= MAX_REWRITE_ATTEMPTS:

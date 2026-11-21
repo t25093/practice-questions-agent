@@ -16,6 +16,7 @@ from langsmith import evaluate  # noqa: E402
 
 from create_dataset import DATASET_NAME  # noqa: E402
 from evaluators import judge  # noqa: E402
+from giveaway import no_giveaway  # noqa: E402
 from quiz_agent.config import JUDGE_MODEL, MODEL_NAME  # noqa: E402
 from quiz_agent.graph import build_graph, initial_state  # noqa: E402
 
@@ -50,7 +51,7 @@ if __name__ == "__main__":
     evaluate(
         target,
         data=DATASET_NAME,
-        evaluators=[judge, rewrites, flagged],
+        evaluators=[judge, no_giveaway, rewrites, flagged],
         experiment_prefix=prefix,
         metadata={"model": MODEL_NAME, "judge_model": JUDGE_MODEL},
         max_concurrency=1,   # אחד-אחד, כדי לא לחרוג ממגבלת הקצב של Gemini

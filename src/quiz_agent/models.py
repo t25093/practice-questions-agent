@@ -27,6 +27,8 @@ class Verdict(BaseModel):
     id: int = Field(description="מספר השאלה")
     answerable_from_text: bool = Field(description="האם אפשר לענות על השאלה רק מתוך הטקסט")
     single_correct_answer: bool = Field(description="האם יש בדיוק תשובה נכונה אחת, והיא זו המסומנת")
+    factually_correct: bool = Field(description="האם התשובה המסומנת נכונה גם במציאות, לא רק לפי הטקסט")
+    gives_itself_away: bool = Field(description="האם התשובה הנכונה בולטת באורכה או מועתקת מילה במילה מהטקסט")
     reason: str = Field(description="אם השאלה פסולה - מה בדיוק הבעיה. אם תקינה - מחרוזת ריקה")
 
 
