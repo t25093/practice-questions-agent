@@ -59,4 +59,5 @@ class QuizState(TypedDict, total=False):
     replacement_round: int      # כמה סבבי חלופות כבר היו
     deleted_count: int          # כמה שאלות המורה מחק בסבב האחרון
     deleted_questions: list[str]  # נוסחי כל השאלות שהמורה מחק - כדי שהמחולל לא ייצר אותן שוב
-    export_path: Optional[str]
+    title: str                  # כותרת המסמך, נקבעת על ידי המורה
+    export_paths: Optional[dict]  # {"student": ..., "teacher": ...}

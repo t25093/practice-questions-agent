@@ -43,15 +43,16 @@ def build_graph(checkpointer=None):
     return g.compile(checkpointer=checkpointer or InMemorySaver())
 
 
-def initial_state(source_text: str) -> QuizState:
+def initial_state(source_text: str, title: str = "שאלות תרגול") -> QuizState:
     from .config import NUM_QUESTIONS
     return QuizState(
         source_text=source_text,
+        title=title,
         questions=[],
         to_generate=NUM_QUESTIONS,
         next_id=1,
         replacement_round=0,
         deleted_count=0,
         deleted_questions=[],
-        export_path=None,
+        export_paths=None,
     )

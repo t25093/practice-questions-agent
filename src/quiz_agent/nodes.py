@@ -2,6 +2,7 @@
 from langgraph.types import interrupt
 
 from .config import MAX_REWRITE_ATTEMPTS, get_llm
+from .export_docx import export_to_word
 from .models import MCQ, MCQSet, QuestionItem, QuizState, Verdict
 from .prompts import AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT, VALIDATOR_PROMPT
 
@@ -173,5 +174,6 @@ def prepare_replacements(state: QuizState) -> dict:
 # ---------- ⑤ ייצוא ----------
 
 def export(state: QuizState) -> dict:
-    """ייצוא - בשלב הזה רק מסמן סיום. ייצוא Word ייבנה בשלב הבא."""
-    return {"export_path": None}
+    """ייצוא השאלות המאושרות לשני קבצי Word: לתלמיד ולמורה."""
+    paths = export_to_word(state["questions"], title=state.get("title") or "שאלות תרגול")
+    return {"export_paths": paths}
