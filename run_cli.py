@@ -60,7 +60,7 @@ def main():
         print("\n--- לאישור ---")
         show(payload["to_review"])
         decisions = ask_decisions(payload["to_review"])
-        result = graph.invoke(Command(resume=decisions), config)
+        result = graph.invoke(Command(resume={"decisions": decisions}), config)
 
     print("\n" + "=" * 60)
     print(f"✅ הסתיים. {len(result['questions'])} שאלות סופיות:")

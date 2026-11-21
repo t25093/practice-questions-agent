@@ -118,18 +118,18 @@ def rewrite(state: QuizState) -> dict:
 def teacher_review(state: QuizState) -> dict:
     """הגרף נעצר כאן ומחכה להחלטות המורה.
 
-    המורה מחזיר מילון: {מספר שאלה: {"action": "approve" | "delete" | "edit", ...שדות עריכה}}
+    המורה מחזיר: {"decisions": {"מספר שאלה": {"action": "approve" | "delete" | "edit", ...שדות עריכה}}}
     שאלה שלא קיבלה החלטה נחשבת מאושרת.
     """
     to_review = [q for q in state["questions"] if q["status"] in ("valid", "flagged")]
 
-    decisions: dict = interrupt({
+    answer: dict = interrupt({
         "message": "אשר, מחק או ערוך כל שאלה",
         "to_review": to_review,
         "already_approved": [q for q in state["questions"] if q["status"] == "approved"],
         "replacement_round": state.get("replacement_round", 0),
     })
-    decisions = {int(k): v for k, v in (decisions or {}).items()}
+    decisions = {int(k): v for k, v in (answer or {}).get("decisions", {}).items()}
 
     kept, deleted = [], 0
     for q in state["questions"]:
