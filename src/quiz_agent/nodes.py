@@ -3,8 +3,9 @@ from langgraph.types import interrupt
 
 from .config import MAX_REWRITE_ATTEMPTS, get_llm
 from .export_docx import export_to_word
-from .models import MCQ, MCQSet, QuestionItem, QuizState, Verdict
-from .prompts import AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT, VALIDATOR_PROMPT
+from .models import MCQ, MCQSet, QuestionItem, QuizState, Verdict, VerdictSet
+from .prompts import (AVOID_DELETED, AVOID_DUPLICATES, GENERATOR_PROMPT, REWRITE_PROMPT,
+                      VALIDATOR_ITEM, VALIDATOR_PROMPT)
 
 
 def _format_options(options: list[str]) -> str:
@@ -57,21 +58,39 @@ def generate(state: QuizState) -> dict:
 
 def validate(state: QuizState) -> dict:
     """בודק כל שאלה שעוד לא נבדקה: האם ניתנת למענה מהטקסט, והאם יש לה רק תשובה נכונה אחת."""
-    llm = get_llm(temperature=0).with_structured_output(Verdict, method="json_schema")
+    pending = [q for q in state["questions"] if q["status"] == "pending"]
+    if not pending:
+        return {}
+
+    # קריאה אחת למודל עם כל השאלות שממתינות לבדיקה
+    llm = get_llm(temperature=0).with_structured_output(VerdictSet, method="json_schema")
+    result: VerdictSet = llm.invoke(
+        VALIDATOR_PROMPT.format(
+            source_text=state["source_text"],
+            questions="\n\n".join(
+                VALIDATOR_ITEM.format(
+                    id=q["id"],
+                    question=q["question"],
+                    options=_format_options(q["options"]),
+                    correct=f"{q['correct_index']}. {q['options'][q['correct_index']]}",
+                )
+                for q in pending
+            ),
+        )
+    )
+    by_id = {v.id: v for v in result.verdicts}
+
     updated = []
     for q in state["questions"]:
         if q["status"] != "pending":
             updated.append(q)
             continue
 
-        verdict: Verdict = llm.invoke(
-            VALIDATOR_PROMPT.format(
-                source_text=state["source_text"],
-                question=q["question"],
-                options=_format_options(q["options"]),
-                correct=f"{q['correct_index']}. {q['options'][q['correct_index']]}",
-            )
-        )
+        verdict = by_id.get(q["id"])
+        if verdict is None:
+            # המודל דילג על השאלה - נחשיב כפסולה כדי שתיבדק שוב אחרי תיקון
+            verdict = Verdict(id=q["id"], answerable_from_text=False, single_correct_answer=False,
+                              reason="הבודק לא החזיר פסק דין לשאלה זו")
         ok = verdict.answerable_from_text and verdict.single_correct_answer
         if ok:
             updated.append({**q, "status": "valid", "feedback": ""})

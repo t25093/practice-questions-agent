@@ -24,9 +24,16 @@ class MCQSet(BaseModel):
 class Verdict(BaseModel):
     """פסק הדין של הבודק על שאלה אחת."""
 
+    id: int = Field(description="מספר השאלה")
     answerable_from_text: bool = Field(description="האם אפשר לענות על השאלה רק מתוך הטקסט")
     single_correct_answer: bool = Field(description="האם יש בדיוק תשובה נכונה אחת, והיא זו המסומנת")
     reason: str = Field(description="אם השאלה פסולה - מה בדיוק הבעיה. אם תקינה - מחרוזת ריקה")
+
+
+class VerdictSet(BaseModel):
+    """פסקי הדין של הבודק על כל השאלות - בקריאה אחת."""
+
+    verdicts: list[Verdict]
 
 
 # ---------- מה נשמר בתיק המשותף ----------
